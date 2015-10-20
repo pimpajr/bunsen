@@ -1,10 +1,9 @@
 require 'yaml'
 require 'hashie'
-
 require 'bunsen'
+
 module Bunsen
-  class Honeydew
-    
+  class Honeydew    
     
     def initialize opts
       opts[:bunsen_home] ||= "/etc/bunsen"
@@ -15,17 +14,18 @@ module Bunsen
       @auth = "%s/%s" % [opts[:bunsen_home], opts[:auth]]
         
       load_auth
-      @auth = Hashie.symbolize_keys @auth
       #load_config
       
     end
     
     def load_auth
-      @auth = load_file @auth
+      auth = load_file @auth
+      @auth = Hashie.symbolize_keys auth
     end
     
     def load_config
-      @config = load_file @config
+      config = load_file @config
+      @config = Hashie.symbolize_keys config
     end
     
     def load_file file
