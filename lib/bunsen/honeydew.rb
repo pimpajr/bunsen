@@ -67,7 +67,7 @@ module Bunsen
           ucs.changes.each do |dn,hash|
             case hash[:status]
             when /^create$/, /^update$/
-              puts "%s has changes" % dn
+              puts "\nDN: %s\nChange Status: %s" % [dn,hash[:status]]
               ucs.ucs_vlan_config.each do |conf_dn,conf_opts|
                 case dn
                 when conf_dn
@@ -75,7 +75,7 @@ module Bunsen
                 end
               end
             when /^none$/
-              puts "no changes to make"
+              puts "\nDN: %s\nChange Status: %s" % [dn,hash[:status]]
             end
           end
         end

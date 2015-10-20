@@ -7,7 +7,6 @@ module Bunsen
       api_options.each { |api,config|
         hyper_class = case api
         when /^ucs$/
-          puts "ucs"
           Bunsen::UCS
         when /^vsphere$/
           Bunsen::Vsphere

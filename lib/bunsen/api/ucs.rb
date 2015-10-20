@@ -1,4 +1,5 @@
 require 'ucsimc'
+require 'yaml'
 module Bunsen
   class UCS < Bunsen::API
     attr_accessor :connection
@@ -47,7 +48,7 @@ module Bunsen
         opts[:defaultNet] ||= "no"
         opts[:dn] = "%s/net-%s" % [opts[:domaingroup],opts[:name]]
           
-        # Remove uneeded keys for ucs vlan
+        # Remove unneeded keys for ucs vlan
         opts.delete(:dvs)
         opts.delete(:domaingroup)
         
@@ -75,39 +76,54 @@ module Bunsen
     
     def find_changes in_dn, out_dn
       changes = {}
+        
+      # catch an empty out_dn first so it gets processed
+      # as a create before trying to be compared
+      # an empty hash here indicates the dn in the config
+      # doesn't resolve to anything in the ucs, thus it needs
+      # to be created
+        
       if out_dn.empty?
-        in_dn.each do |idn, ihash|
-        changes[idn] ||= {}
-        changes[idn][:status] = "create"
-        end
+        in_dn.each { |idn, ihash|
+          changes[idn] ||= {}
+          changes[idn][:status] = "create"
+        }
       else
-        out_dn.each do |odn, ohash|
-         in_dn.each do |idn, ihash|
+        
+        # compare the out_dn and in_dn hashes
+        # out_dn is the full value returned from ucs
+        # in_dn is the shortened to the required readwrite
+        # settings, so many won't match but important ones will
+        # when keys match, compare  the values and store
+        # for reporting purposes
+        
+        out_dn.each { |odn, ohash|
+         in_dn.each { |idn, ihash|
            case odn
            when idn.to_s
              changes[idn] ||= {}
-             ohash.each do |okey,oval|
-               ihash.each do |ikey,ival|
+             ohash.each { |okey,oval|
+               ihash.each { |ikey,ival|
                  case okey
                  when ikey.to_s
                    changes[idn][:old] ||= {}
                    changes[idn][:new] ||= {}
                    changes[idn][:status] ||= "none"
                    if oval == ival
-                     puts "%s not changed" % ikey.to_s
+                     #puts "\nDN: %s\n%s: no change" % [idn.to_s, ikey.to_s]
                    else
-                     puts "%s changed" % ikey
+                     #puts "\nDN: %s\n%s: changed to %s" % [idn.to_s,ikey.to_s, ival]
                      changes[idn][:status] = "update"
                      changes[idn][:old][okey] = oval
                      changes[idn][:new][ikey] = ival
                      
                    end
                  end
-               end
-             end
+               }
+             }
            end
-         end
-       end
+         }
+        }
       end
       
 
@@ -115,6 +131,11 @@ module Bunsen
     end
     
     def send_config opts
+      puts "sending configuration to ucs"
+      opts.each { |dn,conf|
+        puts "\nConfiguring %s with:" % dn.to_s
+        puts "#{opts.to_yaml}"
+      }
       @connection.in_dn = opts
       @connection.in_class = @config_class
       @connection.config_mo
