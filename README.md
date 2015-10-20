@@ -1,8 +1,6 @@
 # Bunsen
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/bunsen`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+Bunsen allows for yaml style configuration of settings for Cisco UCS Central and VMWare vSphere, keeping common configuration settings, like vlans (portgroups) in sync with a single configuration file.
 
 ## Installation
 
