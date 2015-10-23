@@ -10,9 +10,10 @@ module Bunsen
       opts[:bunsen_home] ||= "/etc/bunsen"
       opts[:config] ||= "honeydew.yaml"
       opts[:auth] ||= "auth.yaml"
-        
-      @config = "%s/%s" % [opts[:bunsen_home], opts[:config]]
-      @auth = "%s/%s" % [opts[:bunsen_home], opts[:auth]]
+      
+      @bunsen_home = opts[:bunsen_home]  
+      @config = "%s/%s" % [@bunsen_home, opts[:config]]
+      @auth = "%s/%s" % [@bunsen_home, opts[:auth]]
         
       load_auth
       load_config
@@ -58,28 +59,20 @@ module Bunsen
     end
     
     def config_ucs
-      @connected_apis.each do |api|
-        case api
-        when /^ucs$/
-          ucs = instance_variable_get("@" + api)
-          ucs.parse_config @config
-          ucs.check_dn ucs.ucs_vlan_config
-          ucs.changes.each do |dn,hash|
-            case hash[:status]
-            when /^create$/, /^update$/
-              puts "\nDN: %s\nChange Status: %s" % [dn,hash[:status]]
-              ucs.ucs_vlan_config.each do |conf_dn,conf_opts|
-                case dn
-                when conf_dn
-                  ucs.send_config conf_dn => conf_opts
-                end
-              end
-            when /^none$/
-              puts "\nDN: %s\nChange Status: %s" % [dn,hash[:status]]
-            end
-          end
-        end
-      end
+      @connected_apis.each { |api|
+        #case api
+        #when /^ucs$/
+          puts "\n\#\#\#\# #{api} Config Begin \#\#\#\#"
+          api = instance_variable_get("@" + api)
+          api.do_config @config
+          puts "\n\#\#\#\# #{api} Config End \#\#\#\#"
+        #when /^vsphere$/
+        #  puts "\n\#\#\#\# vSphere Config Begin \#\#\#\#"
+        #  vsphere = instance_variable_get("@" + api)
+        #  vsphere.parse_config @config
+        #  puts "\n\#\#\#\# vSphere Config End \#\#\#\#"
+        #end
+      }
     end
     
     

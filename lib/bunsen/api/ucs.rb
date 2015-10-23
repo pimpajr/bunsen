@@ -3,7 +3,7 @@ require 'yaml'
 module Bunsen
   class UCS < Bunsen::API
     attr_accessor :connection
-    attr_reader :ucs_vlan_config, :changes
+    attr_reader :vlan_config, :changes
     
     def initialize opts
       fail unless opts.is_a? Hash
@@ -22,47 +22,106 @@ module Bunsen
       @connection.logout
     end
     
-    def parse_config config
+    def do_config config
       parsed = {}
-      config.each { |type,config|
+      config.each { |type,content|
         case type
+        when /^vnic_templates$/
+          @config_class = "vnicLanConnTempl"
+          parse type, content
+          provision @ucs_config
+          handle_changes @ucs_config
         when /^vlans$/
           @config_class = "fabricVlan"
-          parsed = parse_vlans config
+          parse type, content
+          provision @ucs_config
+          handle_changes @ucs_config
+          @config_class = "vnicEtherIf"
+          provision @assoc_vnic
+          handle_changes @assoc_vnic
+           
         end
       }
-      parsed
     end
     
-    def parse_vlans config
+    def handle_changes config
+      @changes.each { |dn,hash|
+        case hash[:status]
+        when /^create$/, /^update$/
+          puts "\nDN: %s\nChange Status: %s" % [dn,hash[:status]]
+          config.each { |conf_dn,conf_opts|
+          case dn
+          when conf_dn
+            send_config conf_dn => conf_opts
+          end
+          }
+        when /^none$/
+          puts "\nDN: %s\nChange Status: %s" % [dn,hash[:status]]
+        end
+        }
+    end
+    
+    def parse type, config
       new_config = {}
-      config.each { |vlan,opts|
+      config.each { |item,opts|
+        config_copy = opts.dup
+        case type
+        when /^vlans$/
+          unless item.to_s =~ /^defaults$/
+            defaults = config[:defaults]
+            vlan_split = item.to_s.split("-")
+            
+            build_config = defaults.merge(config_copy)
+            build_config[:id] ||= vlan_split[0].to_i.to_s
+            build_config[:name] ||= item.to_s
+            build_config[:dn] = "%s/net-%s" % [build_config[:domaingroup],build_config[:name]]
+            valid_keys = [:id,:name,:mcastPolicyName,:defaultNet,:dn]
+              
+            @assoc_vnic = vlan_associate_vnic build_config
+              
+            dn = build_config[:dn]
+            new_config[dn] ||= {}
+  
+            build_config.each { |key,value|
+              case key
+              when *valid_keys
+                new_config[dn][key] = value
+              end
+            }
+          end
+        when /^vnic_templates$/
+          unless item =~ /^defaults$/
+            vnic_temp = {}
+            build_config = config[:defaults].merge(config_copy)
+            ('A'..'B').each { |fabric_id|
+              vnic_temp = build_config.dup
+              vnic_temp[:name] = "%s-%s"  % [item.to_s, fabric_id.downcase]
+              vnic_temp[:dn] = "%s/lan-conn-templ-%s" % [vnic_temp[:org], vnic_temp[:name]]
+              vnic_temp[:switchId] = fabric_id
+              vnic_temp[:identPoolName] = "%s-%s" % [vnic_temp[:identPoolName], fabric_id]
+              vnic_temp[:operIdentPoolName] = "%s/mac-pool-%s" % [vnic_temp[:operIdentPoolName], vnic_temp[:identPoolName]]
+              valid_keys = [:dn,:mtu,:nwCtrlPolicyName,:operIdentPoolName,:identPoolName,:operNwCtrlPolicyName,:operQosPolicyName,:operStatsPolicyName,:pinToGroupName,:policyLevel,:policyOwner,:qosPolicyName,:statsPolicyName,:target,:templType]
+              
+              dn = vnic_temp[:dn]
+              new_config[dn] ||= {}
         
-        # Build default values allowing certain values to be left
-        # out of config.
-        # OPTIMIZE make defaults configurable
-        vlan_split = vlan.to_s.split("-")
-        opts[:id] ||= vlan_split[0].to_i.to_s
-        opts[:name] ||= vlan
-        opts[:mcastPolicyName] ||= "default"
-        opts[:defaultNet] ||= "no"
-        opts[:dn] = "%s/net-%s" % [opts[:domaingroup],opts[:name]]
-          
-        # Remove unneeded keys for ucs vlan
-        opts.delete(:dvs)
-        opts.delete(:domaingroup)
-        
-        # Prepare new hash
-        dn = opts[:dn]
-        new_config[dn] ||= {}
-        opts.each { |key,value|
-          new_config[dn][key] = value 
-        }  
+              vnic_temp.each { |key,value|
+                case key
+                when *valid_keys
+                  new_config[dn][key] = value
+                end
+              }
+            }
+            
+            
+          end
+        end
+
       }
-      @ucs_vlan_config = new_config
+      @ucs_config = new_config
     end
     
-    def check_dn hash
+    def provision hash
       changes = {}
       hash.each { |dn,conf|
         @connection.in_dn = dn
@@ -130,8 +189,28 @@ module Bunsen
      changes
     end
     
+    def vlan_associate_vnic build_config
+      new_config = {}
+      vnic_conf = {}
+      ('A'..'B').each { |fabric_id|
+        vnic_conf[:switchId] = fabric_id
+        vnic_conf[:defaultNet] = build_config[:defaultNet]
+        vnic_conf[:dn] = "%s/lan-conn-templ-%s-%s/if-%s" %[build_config[:vnic_org],build_config[:vnic_template],fabric_id.downcase, build_config[:name]]
+        vnic_conf[:name] = build_config[:name]
+        valid_keys = [:dn,:defaultNet,:switchId,:name]
+        dn = vnic_conf[:dn]
+        new_config[dn] ||= {}
+        vnic_conf.each { |key,value|
+          case key
+          when *valid_keys
+            new_config[dn][key] = value
+          end
+        }
+      }
+      new_config
+    end
+    
     def send_config opts
-      puts "sending configuration to ucs"
       opts.each { |dn,conf|
         puts "\nConfiguring %s with:" % dn.to_s
         puts "#{opts.to_yaml}"
