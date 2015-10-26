@@ -29,12 +29,12 @@ module Bunsen
       network = datacenter.network
       resolved_pg = nil
       if @pgs.empty?
-        network.each { |f| 
+        network.each { |f|
           @pgs[f.name] = f
           @pgs_time = Time.now
         }
-      elsif Time.now-@pgs_time > 90
-        network.each { |f| 
+      elsif Time.now - @pgs_time > 90
+        network.each { |f|
           @pgs[f.name] = f
           @pgs_time = Time.now
         }
@@ -139,37 +139,37 @@ module Bunsen
     end
     
     def create_pg dvs_name, opts
-      #tasks = []
-      #start = Time.now
+      tasks = []
+      start = Time.now
       opts.each { |vlan,spec|
         puts "\nConfigure %s with:" % vlan
         puts "#{opts.to_yaml}"
         dvs = find_dvs dvs_name
         
       
-        #tasks << dvs.CreateDVPortgroup_Task(spec)
+        tasks << dvs.CreateDVPortgroup_Task(spec)
       
-        #attempts = 5
-        #try = (Time.now - start) / 5
-        #wait_for_tasks tasks, try, attempts
-        #'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
+        attempts = 5
+        try = (Time.now - start) / 5
+        wait_for_tasks tasks, try, attempts
+        puts 'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
       }
     end
     
     def reconfig_pg dvs_name, opts
-      #tasks = []
-      #start = Time.now
+      tasks = []
+      start = Time.now
       opts.each { |vlan,spec|
         puts "\nConfigure %s with:" % vlan
         puts "#{opts.to_yaml}"
         dvs = find_dvs dvs_name
   
-        #tasks << dvs.ReconfigureDVPortgroup_Task(spec)
+        tasks << dvs.ReconfigureDVPortgroup_Task(spec)
   
-        #attempts = 5
-        #try = (Time.now - start) / 5
-        #wait_for_tasks tasks, try, attempts
-        #'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
+        attempts = 5
+        try = (Time.now - start) / 5
+        wait_for_tasks tasks, try, attempts
+        puts 'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
       }
     end
     
