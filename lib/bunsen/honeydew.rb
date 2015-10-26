@@ -18,12 +18,8 @@ module Bunsen
       load_auth
       load_config
       load_apis
-      test
-    end
-    
-    def test
-      test = instance_variable_get("@"+@connected_apis[0])
-      puts test
+      dew_config
+      disconnect_apis
     end
     
     def load_auth
@@ -45,6 +41,15 @@ module Bunsen
       yaml
     end
     
+    # Dynamically connect to api's defined in auth file
+    # using Bunsen::API.create, which supports dynamic loading
+    # of custom api files in the api folder using the top level
+    # hash name in the auth config file
+    #
+    # Current default supported api's are:
+    # vsphere using rbvmomi
+    # ucs central using ucsimc
+    
     def load_apis
       connected = []
       @auth.each { |api, auth_hash|
@@ -58,20 +63,33 @@ module Bunsen
       @connected_apis = connected
     end
     
-    def config_ucs
-      @connected_apis.each { |api|
-        #case api
-        #when /^ucs$/
-          puts "\n\#\#\#\# #{api} Config Begin \#\#\#\#"
-          api = instance_variable_get("@" + api)
-          api.do_config @config
-          puts "\n\#\#\#\# #{api} Config End \#\#\#\#"
-        #when /^vsphere$/
-        #  puts "\n\#\#\#\# vSphere Config Begin \#\#\#\#"
-        #  vsphere = instance_variable_get("@" + api)
-        #  vsphere.parse_config @config
-        #  puts "\n\#\#\#\# vSphere Config End \#\#\#\#"
-        #end
+    # Dynamically load any api's connected with
+    # load_apis using Bunsen::API.create, which supports
+    # dynamic loading of custom files in the api folder
+    #
+    # Custom api classes must have a do_config method that ultimately
+    # executes configuration on the api.
+    # This class must also parse the config hash and merge the defaults
+    # The class should also track changes and only take action when
+    # changes are detected.
+    
+    def dew_config
+      start = Time.now
+      @connected_apis.each { |api_name|
+        puts "\n\#\#\#\# #{api_name} Config Begin \#\#\#\#"
+        api = instance_variable_get("@" + api_name)
+        api.dew_config @config
+        puts "\n\#\#\#\# #{api_name} Config End \#\#\#\#"
+      }
+      puts "Took %.2f seconds to resolve and configure." % (Time.now-start)
+    end
+    
+    def disconnect_apis
+      @connected_apis.each { |api_name|
+        puts "\n\#\#\#\# #{api_name} Disconnect Begin \#\#\#\#"
+        api = instance_variable_get("@" + api_name)
+        api.disconnect
+        puts "\n\#\#\#\# #{api_name} Disconnect End \#\#\#\#"
       }
     end
     

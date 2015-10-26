@@ -10,6 +10,7 @@ module Bunsen
       fail unless opts[:user].is_a? String
       fail unless opts[:password].is_a? String
       fail unless opts[:host].is_a? String
+      @pgs = {}
       connect opts
     end
     
@@ -18,11 +19,34 @@ module Bunsen
       @connection
     end
     
+    def disconnect
+      puts "Closing vSphere Connection"
+      @connection.close
+    end
+    
     def find_pg port_group
       datacenter = @connection.serviceInstance.find_datacenter
       network = datacenter.network
-      pg = network.find { |f| f.name == port_group}
-      pg
+      resolved_pg = nil
+      if @pgs.empty?
+        network.each { |f| 
+          @pgs[f.name] = f
+          @pgs_time = Time.now
+        }
+      elsif Time.now-@pgs_time > 90
+        network.each { |f| 
+          @pgs[f.name] = f
+          @pgs_time = Time.now
+        }
+      end
+      
+      @pgs.each { |pg_name,pg|
+        case pg_name
+        when port_group
+          resolved_pg = pg
+        end
+      }
+      resolved_pg
     end
     
     def find_dvs name
@@ -32,7 +56,7 @@ module Bunsen
       dvs
     end
     
-    def do_config config
+    def dew_config config
       parsed = {}
       config.each { |type,conf|
         case type
@@ -52,23 +76,29 @@ module Bunsen
           # Build default values allowing certain values to be left
           # out of config.
           # OPTIMIZE make defaults configurable
-          build_config = config[:defaults].merge(config_copy)
-          fail unless build_config[:dvs].is_a? String
-          vlan_split = vlan.to_s.split("-")
-          build_config[:id] ||= vlan_split[0].to_i
-          build_config[:name] ||= vlan.to_s
-          build_config[:id] = build_config[:id].is_a?(String) ? build_config[:id].to_i : build_config[:id]
-            
-          # Prepare new hash
-          name = build_config[:name]
-          new_config[name] ||= {}
-          valid_keys = [:id,:name,:dvs]
-          build_config.each { |key,value|
-            case key
-            when *valid_keys
-              new_config[name][key] = value 
-            end
-          }
+          if config[:defaults]
+            build_config = config[:defaults].merge(config_copy)
+          else
+            build_config = config_copy
+          end
+          if build_config[:dvs]
+            fail unless build_config[:dvs].is_a? String
+            vlan_split = vlan.to_s.split("-")
+            build_config[:id] ||= vlan_split[0].to_i
+            build_config[:name] ||= vlan.to_s
+            build_config[:id] = build_config[:id].is_a?(String) ? build_config[:id].to_i : build_config[:id]
+              
+            # Prepare new hash
+            name = build_config[:name]
+            new_config[name] ||= {}
+            valid_keys = [:id,:name,:dvs]
+            build_config.each { |key,value|
+              case key
+              when *valid_keys
+                new_config[name][key] = value 
+              end
+            }
+          end
         end
       }
       @vlan_config = new_config
@@ -85,7 +115,6 @@ module Bunsen
         changes[vlan][:new] ||= {}
         changes[vlan][:new][:id] = conf[:id]
         # resolve distributed vswitch and portgroup
-        @dvs = find_dvs conf[:dvs]
         pg = find_pg vlan
         if pg
           # pg found, check for changes and reconfig instead of create
@@ -95,11 +124,13 @@ module Bunsen
             changes[vlan][:status] = "none"
           else
             changes[vlan][:status] = "update"
+            changes[vlan][:dvs] = conf[:dvs]
             vlan_spec = vlan_spec.merge(reconfig_spec(conf, pg))
           end
         else
           #pg not found, create instead of reconfig
           changes[vlan][:status] = "create"
+          changes[vlan][:dvs] = conf[:dvs]
           vlan_spec = vlan_spec.merge(create_spec(conf))
         end
       }
@@ -107,35 +138,38 @@ module Bunsen
       @changes = changes
     end
     
-    def create_pg opts
-      tasks = []
-      start = Time.now
+    def create_pg dvs_name, opts
+      #tasks = []
+      #start = Time.now
       opts.each { |vlan,spec|
         puts "\nConfigure %s with:" % vlan
         puts "#{opts.to_yaml}"
+        dvs = find_dvs dvs_name
+        
       
-        tasks << @dvs.CreateDVPortgroup_Task(spec)
+        #tasks << dvs.CreateDVPortgroup_Task(spec)
       
-        attempts = 5
-        try = (Time.now - start) / 5
-        wait_for_tasks tasks, try, attempts
-        'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
+        #attempts = 5
+        #try = (Time.now - start) / 5
+        #wait_for_tasks tasks, try, attempts
+        #'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
       }
     end
     
-    def reconfig_pg opts
-      tasks = []
-      start = Time.now
+    def reconfig_pg dvs_name, opts
+      #tasks = []
+      #start = Time.now
       opts.each { |vlan,spec|
         puts "\nConfigure %s with:" % vlan
         puts "#{opts.to_yaml}"
+        dvs = find_dvs dvs_name
   
-        tasks << @dvs.ReconfigureDVPortgroup_Task(spec)
+        #tasks << dvs.ReconfigureDVPortgroup_Task(spec)
   
-        attempts = 5
-        try = (Time.now - start) / 5
-        wait_for_tasks tasks, try, attempts
-        'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
+        #attempts = 5
+        #try = (Time.now - start) / 5
+        #wait_for_tasks tasks, try, attempts
+        #'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
       }
     end
     
@@ -216,8 +250,9 @@ module Bunsen
           @vlan_spec.each { |conf_vlan,conf_spec|
             case vlan
             when conf_vlan
+              dvs_name = hash[:dvs]
               puts "send %s to config" % vlan
-              create_pg conf_vlan => conf_spec
+              create_pg dvs_name, conf_vlan => conf_spec
             end
           }
         when /^update$/
@@ -225,8 +260,9 @@ module Bunsen
           @vlan_spec.each { |conf_vlan,conf_spec|
             case vlan
             when conf_vlan
+              dvs_name = hash[:dvs]
               puts "send %s to config" % vlan
-              reconfig_pg conf_vlan => conf_spec
+              reconfig_pg dvs_name, conf_vlan => conf_spec
             end
           }
         when /^none$/

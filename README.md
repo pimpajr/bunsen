@@ -1,6 +1,28 @@
 # Bunsen
 
-Bunsen allows for yaml style configuration of settings for Cisco UCS Central and VMWare vSphere, keeping common configuration settings, like vlans (portgroups) in sync with a single configuration file.
+Bunsen is a tool for using a single point of configuration (yaml) for systems that typically 
+require manual configuration but provide some kind of api to execute configuration on
+as well. Currently Bunsen supports executing configuration on the VMware vSphere api using
+rbvmomi and Cisco UCS Central xml api using ucsimc. 
+
+### vSphere Support
+Currently Bunsen supports configuring portgroups on a specified DVS with a specific vlan
+configuration. The values needed for this are name, id, and dvs name. Name and id can be
+derived from the key for the individual hash configuration for each vlan. They can
+also be specified as values. Since these are the basic values for vlan regardless,
+the only additional required value to make this work is the name of the DVS to 
+configure the port group on.
+
+### UCS Support
+Bunsen supports configuring vlans, vnic templates, and vlan entries in a vnic template in UCS
+Central. Vlans and vnic templates are the two items in the configuration for both UCS and vSphere. The vlan entry that gets applied to the vnic template gets derived from the vlan's
+configuration, so there's no separate entry for configuring it. 
+
+At this point in time Bunsen does take a couple liberties with UCS configuration. For each
+vnic_template, it creates an A and a B entry that use the respective fabrics. With this method, the failover option doesn't get checked and a couple vnic interfaces are created for each template. Bunsen doesn't handle the actual vnic interface creation or update yet though, just the templates. 
+
+
+
 
 ## Installation
 

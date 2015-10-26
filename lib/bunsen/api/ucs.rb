@@ -19,10 +19,11 @@ module Bunsen
     end
     
     def disconnect
+      puts "Closing UCS Connection"
       @connection.logout
     end
     
-    def do_config config
+    def dew_config config
       parsed = {}
       config.each { |type,content|
         case type
@@ -63,21 +64,25 @@ module Bunsen
     
     def parse type, config
       new_config = {}
+      @assoc_vnic = {}
       config.each { |item,opts|
         config_copy = opts.dup
         case type
         when /^vlans$/
           unless item.to_s =~ /^defaults$/
-            defaults = config[:defaults]
+            if config[:defaults]
+              build_config = config[:defaults].merge(config_copy)
+            else
+              build_config = config_copy
+            end
             vlan_split = item.to_s.split("-")
             
-            build_config = defaults.merge(config_copy)
             build_config[:id] ||= vlan_split[0].to_i.to_s
             build_config[:name] ||= item.to_s
             build_config[:dn] = "%s/net-%s" % [build_config[:domaingroup],build_config[:name]]
             valid_keys = [:id,:name,:mcastPolicyName,:defaultNet,:dn]
               
-            @assoc_vnic = vlan_associate_vnic build_config
+            @assoc_vnic = @assoc_vnic.merge(vlan_associate_vnic(build_config))
               
             dn = build_config[:dn]
             new_config[dn] ||= {}
@@ -92,14 +97,26 @@ module Bunsen
         when /^vnic_templates$/
           unless item =~ /^defaults$/
             vnic_temp = {}
-            build_config = config[:defaults].merge(config_copy)
+            if config[:defaults]
+              build_config = config[:defaults].merge(config_copy)
+            else
+              build_config = config_copy
+            end
             ('A'..'B').each { |fabric_id|
               vnic_temp = build_config.dup
               vnic_temp[:name] = "%s-%s"  % [item.to_s, fabric_id.downcase]
-              vnic_temp[:dn] = "%s/lan-conn-templ-%s" % [vnic_temp[:org], vnic_temp[:name]]
+              if vnic_temp[:org] =~ /\/$/
+                vnic_temp[:dn] = "%slan-conn-templ-%s" % [vnic_temp[:org], vnic_temp[:name]]
+              else
+                vnic_temp[:dn] = "%s/lan-conn-templ-%s" % [vnic_temp[:org], vnic_temp[:name]]
+              end
               vnic_temp[:switchId] = fabric_id
               vnic_temp[:identPoolName] = "%s-%s" % [vnic_temp[:identPoolName], fabric_id]
-              vnic_temp[:operIdentPoolName] = "%s/mac-pool-%s" % [vnic_temp[:operIdentPoolName], vnic_temp[:identPoolName]]
+              if vnic_temp[:operIdentPoolName] =~ /\/$/
+                vnic_temp[:operIdentPoolName] = "%smac-pool-%s" % [vnic_temp[:operIdentPoolName], vnic_temp[:identPoolName]]
+              else
+                vnic_temp[:operIdentPoolName] = "%s/mac-pool-%s" % [vnic_temp[:operIdentPoolName], vnic_temp[:identPoolName]]
+              end
               valid_keys = [:dn,:mtu,:nwCtrlPolicyName,:operIdentPoolName,:identPoolName,:operNwCtrlPolicyName,:operQosPolicyName,:operStatsPolicyName,:pinToGroupName,:policyLevel,:policyOwner,:qosPolicyName,:statsPolicyName,:target,:templType]
               
               dn = vnic_temp[:dn]
@@ -211,13 +228,14 @@ module Bunsen
     end
     
     def send_config opts
+      puts "\n\nStarting #{@config_class} Task"
       opts.each { |dn,conf|
         puts "\nConfiguring %s with:" % dn.to_s
         puts "#{opts.to_yaml}"
       }
       @connection.in_dn = opts
       @connection.in_class = @config_class
-      @connection.config_mo
+      #@connection.config_mo
     end
     
   end
