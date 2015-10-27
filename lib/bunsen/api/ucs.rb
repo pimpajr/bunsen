@@ -235,7 +235,7 @@ module Bunsen
       }
       @connection.in_dn = opts
       @connection.in_class = @config_class
-      @connection.config_mo
+      #@connection.config_mo
     end
     
   end

@@ -147,7 +147,7 @@ module Bunsen
         dvs = find_dvs dvs_name
         
       
-        tasks << dvs.CreateDVPortgroup_Task(spec)
+        tasks << dvs.CreateDVPortgroup_Task(:spec => spec)
       
         attempts = 5
         try = (Time.now - start) / 5
@@ -157,19 +157,19 @@ module Bunsen
     end
     
     def reconfig_pg dvs_name, opts
-      tasks = []
-      start = Time.now
+      #tasks = []
+      #start = Time.now
       opts.each { |vlan,spec|
         puts "\nConfigure %s with:" % vlan
         puts "#{opts.to_yaml}"
         dvs = find_dvs dvs_name
   
-        tasks << dvs.ReconfigureDVPortgroup_Task(spec)
+        #tasks << dvs.ReconfigureDVPortgroup_Task(spec)
   
-        attempts = 5
-        try = (Time.now - start) / 5
-        wait_for_tasks tasks, try, attempts
-        puts 'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
+        #attempts = 5
+        #try = (Time.now - start) / 5
+        #wait_for_tasks tasks, try, attempts
+        #puts 'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
       }
     end
     
@@ -194,15 +194,18 @@ module Bunsen
     def create_spec conf
       spec = {}
       vlan_id_spec = RbVmomi::VIM.VmwareDistributedVirtualSwitchVlanIdSpec(
-          :vlanId => conf[:id]
+        :inherited => false,
+        :vlanId => conf[:id]
       )
       dvs_port_spec = RbVmomi::VIM.VMwareDVSPortSetting(
         :vlan => vlan_id_spec
       )
       full_spec = RbVmomi::VIM.DVPortgroupConfigSpec(
         :autoExpand => true,
-          :defaultPortConfig => dvs_port_spec,
-          :name => conf[:name]
+        :defaultPortConfig => dvs_port_spec,
+        :name => conf[:name],
+        :numPorts => 8,
+        :type => "earlyBinding"
       )
       spec[conf[:name]] = full_spec
       spec

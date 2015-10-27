@@ -81,7 +81,7 @@ module Bunsen
         api.dew_config @config
         puts "\n\#\#\#\# #{api_name} Config End \#\#\#\#"
       }
-      puts "Took %.2f seconds to resolve and configure." % (Time.now-start)
+      puts "Took %.2f seconds to resolve and configure." % (Time.now - start)
     end
     
     def disconnect_apis
