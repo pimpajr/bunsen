@@ -53,11 +53,13 @@ module Bunsen
     def load_apis
       connected = []
       @auth.each { |api, auth_hash|
-        api_resolved = Bunsen::API.create api => auth_hash
-        instance_variable_set("@" + api.to_s, api_resolved)
-        instance_variable_get("@" + api.to_s)
-        self.class.send(:attr_accessor, api)
-        connected << api.to_s
+        if auth_hash[:connect]
+          api_resolved = Bunsen::API.create api => auth_hash
+          instance_variable_set("@" + api.to_s, api_resolved)
+          instance_variable_get("@" + api.to_s)
+          self.class.send(:attr_accessor, api)
+          connected << api.to_s
+        end
         
       }
       @connected_apis = connected
