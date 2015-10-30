@@ -121,7 +121,7 @@ module Bunsen
               else
                 vnic_temp[:operIdentPoolName] = "%s/mac-pool-%s" % [vnic_temp[:operIdentPoolName], vnic_temp[:identPoolName]]
               end
-              valid_keys = [:dn,:mtu,:nwCtrlPolicyName,:operIdentPoolName,:identPoolName,:operNwCtrlPolicyName,:operQosPolicyName,:operStatsPolicyName,:pinToGroupName,:policyLevel,:policyOwner,:qosPolicyName,:statsPolicyName,:target,:templType]
+              valid_keys = [:name,:dn,:mtu,:switchId,:nwCtrlPolicyName,:identPoolName,:pinToGroupName,:policyLevel,:policyOwner,:qosPolicyName,:statsPolicyName,:target,:templType]
               
               dn = vnic_temp[:dn]
               new_config[dn] ||= {}
@@ -238,7 +238,7 @@ module Bunsen
             vnic_conf[:dn] = "%s/lan-conn-templ-%s-%s/if-%s" %[build_config[:vnic_org],vnic_temp,fabric_id.downcase, build_config[:name]]
             vnic_conf[:name] = build_config[:name]
                       
-            valid_keys = [:dn,:defaultNet,:switchId,:name]
+            valid_keys = [:dn,:defaultNet,:name]
             dn = vnic_conf[:dn]
             new_config[dn] ||= {}
                       
@@ -273,7 +273,7 @@ module Bunsen
           vnic_conf[:dn] = "%s/lan-conn-templ-%s-%s/if-%s" %[build_config[:vnic_org],build_config[:vnic_template],fabric_id.downcase, build_config[:name]]
           vnic_conf[:name] = build_config[:name]
             
-          valid_keys = [:dn,:defaultNet,:switchId,:name]
+          valid_keys = [:dn,:defaultNet,:name]
           dn = vnic_conf[:dn]
           new_config[dn] ||= {}
             
@@ -296,7 +296,9 @@ module Bunsen
       }
       @connection.in_dn = opts
       @connection.in_class = @config_class
-      #@connection.config_mo
+      start = Time.now
+      @connection.config_mo
+      puts "\nSpent %.2f seconds creating %s %s." % [(Time.now - start), @config_class, opts.keys[0]]
     end
     
   end
