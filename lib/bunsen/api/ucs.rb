@@ -213,21 +213,78 @@ module Bunsen
     def vlan_associate_vnic build_config
       new_config = {}
       vnic_conf = {}
-      ('A'..'B').each { |fabric_id|
-        vnic_conf[:switchId] = fabric_id
-        vnic_conf[:defaultNet] = build_config[:vnic_template_native]
-        vnic_conf[:dn] = "%s/lan-conn-templ-%s-%s/if-%s" %[build_config[:vnic_org],build_config[:vnic_template],fabric_id.downcase, build_config[:name]]
-        vnic_conf[:name] = build_config[:name]
-        valid_keys = [:dn,:defaultNet,:switchId,:name]
-        dn = vnic_conf[:dn]
-        new_config[dn] ||= {}
-        vnic_conf.each { |key,value|
-          case key
-          when *valid_keys
-            new_config[dn][key] = value
-          end
+        
+      if build_config[:vnic_template].is_a? Array
+        build_config[:vnic_template].each { |vnic_temp|
+          ('A'..'B').each { |fabric_id|
+            vnic_conf[:switchId] = fabric_id
+            if build_config[:vnic_template_native].is_a? Array
+              build_config[:vnic_template_native].each { |native_template|
+                case native_template
+                when vnic_temp
+                  vnic_conf[:defaultNet] = 'yes'
+                else
+                  vnic_conf[:defaultNet] = 'no'
+                end
+              }
+            else
+              case build_config[:vnic_template_native]
+              when vnic_temp
+                vnic_conf[:defaultNet] = 'yes'
+              else
+                vnic_conf[:defaultNet] = 'no'
+              end
+            end
+            vnic_conf[:dn] = "%s/lan-conn-templ-%s-%s/if-%s" %[build_config[:vnic_org],vnic_temp,fabric_id.downcase, build_config[:name]]
+            vnic_conf[:name] = build_config[:name]
+                      
+            valid_keys = [:dn,:defaultNet,:switchId,:name]
+            dn = vnic_conf[:dn]
+            new_config[dn] ||= {}
+                      
+            vnic_conf.each { |key,value|
+              case key
+              when *valid_keys
+                new_config[dn][key] = value
+              end
+            }
+          }
         }
-      }
+      else
+        ('A'..'B').each { |fabric_id|
+          vnic_conf[:switchId] = fabric_id
+          if build_config[:vnic_template_native].is_a? Array
+            build_config[:vnic_template_native].each { |native_template|
+              case native_template
+              when build_config[:vnic_template]
+                vnic_conf[:defaultNet] = 'yes'
+              else
+                vnic_conf[:defaultNet] = 'no'
+              end
+            }
+          else
+            case build_config[:vnic_template_native]
+            when build_config[:vnic_template]
+              vnic_conf[:defaultNet] = 'yes'
+            else
+              vnic_conf[:defaultNet] = 'no'
+            end
+          end
+          vnic_conf[:dn] = "%s/lan-conn-templ-%s-%s/if-%s" %[build_config[:vnic_org],build_config[:vnic_template],fabric_id.downcase, build_config[:name]]
+          vnic_conf[:name] = build_config[:name]
+            
+          valid_keys = [:dn,:defaultNet,:switchId,:name]
+          dn = vnic_conf[:dn]
+          new_config[dn] ||= {}
+            
+          vnic_conf.each { |key,value|
+            case key
+            when *valid_keys
+              new_config[dn][key] = value
+            end
+          }
+        }
+      end
       new_config
     end
     
