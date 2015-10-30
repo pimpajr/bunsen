@@ -6,12 +6,11 @@ require 'bunsen/version'
 Gem::Specification.new do |spec|
   spec.name          = "bunsen"
   spec.version       = Bunsen::VERSION
-  spec.authors       = ["existsec"]
+  spec.authors       = ["Patrick Pimentel Jr."]
   spec.email         = ["existsec@gmail.com"]
 
-  spec.summary       = %q{TODO: Write a short summary, because Rubygems requires one.}
-  spec.description   = %q{TODO: Write a longer description or delete this line.}
-  spec.homepage      = "TODO: Put your gem's website or public repo URL here."
+  spec.summary       = %q{Tool for configuring UCS/vSphere from single common configuration file.}
+  spec.homepage      = "http://pimpajr.github.io"
   spec.license       = "MIT"
 
   # Prevent pushing this gem to RubyGems.org by setting 'allowed_push_host', or
@@ -29,4 +28,5 @@ Gem::Specification.new do |spec|
 
   spec.add_development_dependency "bundler", "~> 1.9"
   spec.add_development_dependency "rake", "~> 10.0"
+  spec.add_development_dependency "rspec"
 end

@@ -66,7 +66,11 @@ module Bunsen
       new_config = {}
       @assoc_vnic = {}
       config.each { |item,opts|
-        config_copy = opts.dup
+        if opts
+          config_copy = opts.dup
+        else
+          config_copy = {}
+        end
         case type
         when /^vlans$/
           unless item.to_s =~ /^defaults$/
@@ -77,7 +81,7 @@ module Bunsen
             end
             vlan_split = item.to_s.split("-")
             
-            build_config[:id] ||= vlan_split[0].to_i.to_s
+            build_config[:id] ||= vlan_split[1].to_i.to_s
             build_config[:name] ||= item.to_s
             build_config[:dn] = "%s/net-%s" % [build_config[:domaingroup],build_config[:name]]
             valid_keys = [:id,:name,:mcastPolicyName,:defaultNet,:dn]
@@ -211,7 +215,7 @@ module Bunsen
       vnic_conf = {}
       ('A'..'B').each { |fabric_id|
         vnic_conf[:switchId] = fabric_id
-        vnic_conf[:defaultNet] = build_config[:defaultNet]
+        vnic_conf[:defaultNet] = build_config[:vnic_template_native]
         vnic_conf[:dn] = "%s/lan-conn-templ-%s-%s/if-%s" %[build_config[:vnic_org],build_config[:vnic_template],fabric_id.downcase, build_config[:name]]
         vnic_conf[:name] = build_config[:name]
         valid_keys = [:dn,:defaultNet,:switchId,:name]
