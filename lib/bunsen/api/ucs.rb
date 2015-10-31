@@ -116,11 +116,6 @@ module Bunsen
               end
               vnic_temp[:switchId] = fabric_id
               vnic_temp[:identPoolName] = "%s-%s" % [vnic_temp[:identPoolName], fabric_id]
-              if vnic_temp[:operIdentPoolName] =~ /\/$/
-                vnic_temp[:operIdentPoolName] = "%smac-pool-%s" % [vnic_temp[:operIdentPoolName], vnic_temp[:identPoolName]]
-              else
-                vnic_temp[:operIdentPoolName] = "%s/mac-pool-%s" % [vnic_temp[:operIdentPoolName], vnic_temp[:identPoolName]]
-              end
               valid_keys = [:name,:dn,:mtu,:switchId,:nwCtrlPolicyName,:identPoolName,:pinToGroupName,:policyLevel,:policyOwner,:qosPolicyName,:statsPolicyName,:target,:templType]
               
               dn = vnic_temp[:dn]
