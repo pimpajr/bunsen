@@ -108,13 +108,13 @@ module Bunsen
             end
             vnic_temp = build_config.dup
             if vnic_temp[:switchId]
-              vnic_temp[:name] = "%s-%s"  % [item.to_s, fabric_id.downcase]
+              vnic_temp[:name] = "%s-%s"  % [item.to_s, vnic_temp[:switchId].downcase]
               if vnic_temp[:org] =~ /\/$/
                 vnic_temp[:dn] = "%slan-conn-templ-%s" % [vnic_temp[:org], vnic_temp[:name]]
               else
                 vnic_temp[:dn] = "%s/lan-conn-templ-%s" % [vnic_temp[:org], vnic_temp[:name]]
               end
-              vnic_temp[:identPoolName] = "%s-%s" % [vnic_temp[:identPoolName], fabric_id]
+              vnic_temp[:identPoolName] = "%s-%s" % [vnic_temp[:identPoolName], vnic_temp[:switchId].split("-")[0]]
               valid_keys = [:name,:dn,:mtu,:switchId,:nwCtrlPolicyName,:identPoolName,:pinToGroupName,:policyLevel,:policyOwner,:qosPolicyName,:statsPolicyName,:target,:templType]
                                       
               dn = vnic_temp[:dn]
@@ -128,7 +128,7 @@ module Bunsen
               }
             else
               ('A'..'B').each { |fabric_id|
-                #vnic_temp = build_config.dup
+                vnic_temp = build_config.dup
                 vnic_temp[:name] = "%s-%s"  % [item.to_s, fabric_id.downcase]
                 if vnic_temp[:org] =~ /\/$/
                   vnic_temp[:dn] = "%slan-conn-templ-%s" % [vnic_temp[:org], vnic_temp[:name]]
@@ -315,7 +315,7 @@ module Bunsen
       @connection.in_dn = opts
       @connection.in_class = @config_class
       start = Time.now
-      @connection.config_mo
+      #@connection.config_mo
       puts "\nSpent %.2f seconds creating %s %s." % [(Time.now - start), @config_class, opts.keys[0]]
     end
     
