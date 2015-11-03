@@ -106,28 +106,51 @@ module Bunsen
             else
               build_config = config_copy
             end
-            ('A'..'B').each { |fabric_id|
-              vnic_temp = build_config.dup
+            vnic_temp = build_config.dup
+            if vnic_temp[:switchId]
               vnic_temp[:name] = "%s-%s"  % [item.to_s, fabric_id.downcase]
               if vnic_temp[:org] =~ /\/$/
                 vnic_temp[:dn] = "%slan-conn-templ-%s" % [vnic_temp[:org], vnic_temp[:name]]
               else
                 vnic_temp[:dn] = "%s/lan-conn-templ-%s" % [vnic_temp[:org], vnic_temp[:name]]
               end
-              vnic_temp[:switchId] = fabric_id
               vnic_temp[:identPoolName] = "%s-%s" % [vnic_temp[:identPoolName], fabric_id]
               valid_keys = [:name,:dn,:mtu,:switchId,:nwCtrlPolicyName,:identPoolName,:pinToGroupName,:policyLevel,:policyOwner,:qosPolicyName,:statsPolicyName,:target,:templType]
-              
+                                      
               dn = vnic_temp[:dn]
               new_config[dn] ||= {}
-        
+                                    
               vnic_temp.each { |key,value|
                 case key
                 when *valid_keys
                   new_config[dn][key] = value
                 end
               }
-            }
+            else
+              ('A'..'B').each { |fabric_id|
+                #vnic_temp = build_config.dup
+                vnic_temp[:name] = "%s-%s"  % [item.to_s, fabric_id.downcase]
+                if vnic_temp[:org] =~ /\/$/
+                  vnic_temp[:dn] = "%slan-conn-templ-%s" % [vnic_temp[:org], vnic_temp[:name]]
+                else
+                  vnic_temp[:dn] = "%s/lan-conn-templ-%s" % [vnic_temp[:org], vnic_temp[:name]]
+                end
+                vnic_temp[:switchId] = fabric_id
+                vnic_temp[:identPoolName] = "%s-%s" % [vnic_temp[:identPoolName], fabric_id]
+                valid_keys = [:name,:dn,:mtu,:switchId,:nwCtrlPolicyName,:identPoolName,:pinToGroupName,:policyLevel,:policyOwner,:qosPolicyName,:statsPolicyName,:target,:templType]
+                          
+                dn = vnic_temp[:dn]
+                new_config[dn] ||= {}
+                      
+                vnic_temp.each { |key,value|
+                  case key
+                  when *valid_keys
+                    new_config[dn][key] = value
+                  end
+                }
+              }
+            end
+            
             
             
           end
