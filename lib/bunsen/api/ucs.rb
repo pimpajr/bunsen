@@ -324,7 +324,7 @@ module Bunsen
       @connection.in_dn = opts
       @connection.in_class = @config_class
       start = Time.now
-      #@connection.config_mo
+      @connection.config_mo
       puts "\nSpent %.2f seconds creating %s %s." % [(Time.now - start), @config_class, opts.keys[0]]
     end
     
