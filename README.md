@@ -18,6 +18,7 @@ Bunsen supports configuring vlans, vnic templates, and vlan entries in a vnic te
 Central. Vlans and vnic templates are the two items in the configuration for both UCS and vSphere. The vlan entry that gets applied to the vnic template gets derived from the vlan's
 configuration, so there's no separate entry for configuring it.
 
+
 At this point in time Bunsen does take a couple liberties with UCS configuration. For each
 vnic_template, it creates an A and a B entry that use the respective fabrics. With this method, the failover option doesn't get checked and a couple vnic interfaces are created for each template. Bunsen doesn't handle the actual vnic interface creation or update yet though, just the templates.
 
