@@ -4,7 +4,7 @@ module Bunsen
   class Vsphere < Bunsen::API
     attr_accessor :connection
     attr_reader :vlan_config, :changes, :vlan_spec
-    
+
     def initialize opts
       fail unless opts.is_a? Hash
       fail unless opts[:user].is_a? String
@@ -13,17 +13,17 @@ module Bunsen
       @pgs = {}
       connect opts
     end
-    
+
     def connect opts
       @connection = RbVmomi::VIM.connect opts
       @connection
     end
-    
+
     def disconnect
       puts "Closing vSphere Connection"
       @connection.close
     end
-    
+
     def find_pg port_group, conf
       datacenter = @connection.serviceInstance.find_datacenter conf[:datacenter]
       network = datacenter.network
@@ -39,7 +39,7 @@ module Bunsen
           @pgs_time = Time.now
         }
       end
-      
+
       @pgs.each { |pg_name,pg|
         case pg_name
         when port_group
@@ -48,16 +48,15 @@ module Bunsen
       }
       resolved_pg
     end
-    
+
     def find_dvs name, datacenter
       dc = @connection.serviceInstance.find_datacenter datacenter
       net_folder = dc.networkFolder
       dvs = net_folder.childEntity.find { |f| f.name == name }
       dvs
     end
-    
+
     def dew_config config
-      parsed = {}
       config.each { |type,conf|
         case type
         when /^vlans$/
@@ -67,7 +66,7 @@ module Bunsen
         end
       }
     end
-    
+
     def parse_vlans config
       new_config = {}
       config.each { |vlan,opts|
@@ -92,7 +91,7 @@ module Bunsen
             build_config[:id] ||= vlan_split[1].to_i
             build_config[:name] ||= vlan.to_s
             build_config[:id] = build_config[:id].is_a?(String) ? build_config[:id].to_i : build_config[:id]
-              
+
             # Prepare new hash
             name = build_config[:name]
             new_config[name] ||= {}
@@ -100,7 +99,7 @@ module Bunsen
             build_config.each { |key,value|
               case key
               when *valid_keys
-                new_config[name][key] = value 
+                new_config[name][key] = value
               end
             }
           end
@@ -108,12 +107,12 @@ module Bunsen
       }
       @vlan_config = new_config
     end
-    
+
     def provision hash
       changes = {}
       vlan_spec = {}
       hash.each { |vlan,conf|
-        
+
         # setup changes hash
         changes[vlan] ||= {}
         changes[vlan][:old] ||= {}
@@ -142,7 +141,7 @@ module Bunsen
       @vlan_spec = vlan_spec
       @changes = changes
     end
-    
+
     def create_pg datacenter, dvs_name, opts
       tasks = []
       start = Time.now
@@ -150,17 +149,17 @@ module Bunsen
         puts "\nConfigure %s with:" % vlan
         puts "#{opts.to_yaml}"
         dvs = find_dvs dvs_name, datacenter
-        
-      
+
+
         tasks << dvs.CreateDVPortgroup_Task(:spec => spec)
-      
+
         attempts = 5
         try = (Time.now - start) / 5
         wait_for_tasks tasks, try, attempts
         puts 'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
       }
     end
-    
+
     def reconfig_pg datacenter, dvs_name, opts
       tasks = []
       start = Time.now
@@ -168,17 +167,17 @@ module Bunsen
         puts "\nConfigure %s with:" % vlan
         puts "#{opts.to_yaml}"
         dvs = find_dvs dvs_name, datacenter
-  
+
         tasks << dvs.ReconfigureDVPortgroup_Task(spec)
-  
+
         attempts = 5
         try = (Time.now - start) / 5
         wait_for_tasks tasks, try, attempts
         puts 'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
       }
     end
-    
-    
+
+
     def reconfig_spec conf, pg
       spec = {}
       vlan_id_spec = RbVmomi::VIM.VmwareDistributedVirtualSwitchVlanIdSpec(
@@ -195,7 +194,7 @@ module Bunsen
       spec[conf[:name]] = full_spec
       spec
     end
-    
+
     def create_spec conf
       spec = {}
       vlan_id_spec = RbVmomi::VIM.VmwareDistributedVirtualSwitchVlanIdSpec(
@@ -215,7 +214,7 @@ module Bunsen
       spec[conf[:name]] = full_spec
       spec
     end
-    
+
     def wait_for_tasks tasks, try, attempts
       obj_set = tasks.map { |task| { :obj => task } }
       filter = @connection.propertyCollector.CreateFilter(
@@ -249,7 +248,7 @@ module Bunsen
       filter.DestroyPropertyFilter
       tasks
     end
-    
+
     def handle_changes
       @changes.each { |vlan,hash|
         case hash[:status]
@@ -280,6 +279,6 @@ module Bunsen
         end
       }
     end
-  
+
   end
 end

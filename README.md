@@ -3,7 +3,7 @@
 Bunsen is a tool for using a single point of configuration (yaml) for systems that typically
 require manual configuration but provide some kind of api to execute configuration on
 as well. Currently Bunsen supports executing configuration on the VMware vSphere api using
-rbvmomi and Cisco UCS Central xml api using ucsimc.
+rbvmomi and Cisco UCS Central xml api using ucsimc..
 
 ### vSphere Support
 Currently Bunsen supports configuring portgroups in a specified datacenter
