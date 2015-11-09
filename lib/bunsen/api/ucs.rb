@@ -27,18 +27,57 @@ module Bunsen
       config.each { |type,content|
         case type
         when /^vnic_templates$/
+          puts "\n\#\#\#\# #{type} Configuration Begin \#\#\#\#"
+          puts "\nParsing vNIC Template configuration..."
+          parse type, content, config
+
           @config_class = "vnicLanConnTempl"
-          parse type, content, config
+          puts "\n\#\#\#\# #{@config_class} Configuration Begin \#\#\#\#"
+          puts "Starting #{@config_class} provisioning..."
           provision @ucs_config
+          puts "\n#{@config_class} provisioning done. Checking for and handling changes..."
           handle_changes @ucs_config
+          puts "\n\#\#\#\# #{@config_class} Configuration End \#\#\#\#"
+
+          puts "\n\#\#\#\# #{type} Configuration End \#\#\#\#"
         when /^vlans$/
-          @config_class = "fabricVlan"
+          puts "\n\#\#\#\# #{type} Configuration Begin \#\#\#\#"
+          puts "\nParsing VLAN configuration..."
           parse type, content, config
+
+          @config_class = "fabricVlan"
+          puts "\n\#\#\#\# #{@config_class} Configuration Begin \#\#\#\#"
+          puts "Starting #{@config_class} provisioning..."
           provision @ucs_config
+          puts "\n#{@config_class} provisioning done. Checking for and handling changes..."
           handle_changes @ucs_config
+          puts "\n\#\#\#\# #{@config_class} Configuration End \#\#\#\#"
+
           @config_class = "vnicEtherIf"
+          puts "\n\#\#\#\# #{@config_class} Configuration Begin \#\#\#\#"
+          puts "Starting #{@config_class} provisioning..."
           provision @assoc_vnic
+          puts "\n#{@config_class} provisioning done. Checking for and handling changes..."
           handle_changes @assoc_vnic
+          puts "\n\#\#\#\# #{@config_class} Configuration End \#\#\#\#"
+
+          @config_class = "fabricVlanReq"
+          puts "\n\#\#\#\# #{@config_class} Configuration Begin \#\#\#\#"
+          puts "Starting #{@config_class} provisioning..."
+          provision @org_vlan_req
+          puts "\n#{@config_class} provisioning done. Checking for and handling changes..."
+          handle_changes @org_vlan_req
+          puts "\n\#\#\#\# #{@config_class} Configuration End \#\#\#\#"
+
+          @config_class = "fabricVlanPermit"
+          puts "\n\#\#\#\# #{@config_class} Configuration Begin \#\#\#\#"
+          puts "Starting #{@config_class} provisioning..."
+          provision @org_vlan_permit
+          puts "\n#{@config_class} provisioning done. Checking for and handling changes..."
+          handle_changes @org_vlan_permit
+          puts "\n\#\#\#\# #{@config_class} Configuration End \#\#\#\#"
+
+          puts "\n\#\#\#\# #{type} Configuration End \#\#\#\#"
 
         end
       }
@@ -64,6 +103,8 @@ module Bunsen
     def parse type, content, config
       new_config = {}
       @assoc_vnic = {}
+      @org_vlan_req = {}
+      @org_vlan_permit = {}
       content.each { |item,opts|
         if opts
           config_copy = opts.dup
@@ -86,6 +127,8 @@ module Bunsen
             valid_keys = [:id,:name,:mcastPolicyName,:defaultNet,:dn]
             vlan_vnic = vlan_associate_vnic(build_config, config)
             @assoc_vnic = @assoc_vnic.merge(vlan_vnic)
+            @org_vlan_req = @org_vlan_req.merge(vlan_req(build_config))
+            @org_vlan_permit = @org_vlan_permit.merge(vlan_permit(build_config))
 
             dn = build_config[:dn]
             new_config[dn] ||= {}
@@ -311,6 +354,30 @@ module Bunsen
         end
       }
       new_config
+    end
+
+    def vlan_req build_config
+      req_initial = build_config.dup
+      dn = "%s/vlan-req-%s" % [req_initial[:vnic_org],req_initial[:name]]
+
+      req_conf = {}
+      req_conf[dn] ||= {}
+      req_conf[dn][:dn] = dn
+      req_conf[dn][:name] = req_initial[:name]
+
+      req_conf
+    end
+
+    def vlan_permit build_config
+      permit_initial = build_config.dup
+      dn = "%s/vlan-permit-%s" % [permit_initial[:vnic_org],permit_initial[:name]]
+
+      permit_conf = {}
+      permit_conf[dn] ||= {}
+      permit_conf[dn][:dn] = dn
+      permit_conf[dn][:name] = permit_initial[:name]
+
+      permit_conf
     end
 
     def send_config opts
