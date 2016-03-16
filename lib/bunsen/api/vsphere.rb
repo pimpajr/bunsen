@@ -123,8 +123,9 @@ module Bunsen
         if pg
           # pg found, check for changes and reconfig instead of create
           pg_id = pg.config.defaultPortConfig.vlan.vlanId
+          pg_name = pg.name
           changes[vlan][:old][:id] = pg_id
-          if conf[:id] == pg_id
+          if conf[:id] == pg_id && conf[:name] == pg_name
             changes[vlan][:status] = "none"
           else
             changes[vlan][:status] = "update"
@@ -143,37 +144,37 @@ module Bunsen
     end
 
     def create_pg datacenter, dvs_name, opts
-      tasks = []
-      start = Time.now
+      #tasks = []
+      #start = Time.now
       opts.each { |vlan,spec|
         puts "\nConfigure %s with:" % vlan
         puts "#{opts.to_yaml}"
         dvs = find_dvs dvs_name, datacenter
 
 
-        tasks << dvs.CreateDVPortgroup_Task(:spec => spec)
+        #tasks << dvs.CreateDVPortgroup_Task(:spec => spec)
 
-        attempts = 5
-        try = (Time.now - start) / 5
-        wait_for_tasks tasks, try, attempts
-        puts 'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
+        #attempts = 5
+        #try = (Time.now - start) / 5
+        #wait_for_tasks tasks, try, attempts
+        #puts 'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
       }
     end
 
     def reconfig_pg datacenter, dvs_name, opts
-      tasks = []
-      start = Time.now
+      #tasks = []
+      #start = Time.now
       opts.each { |vlan,spec|
         puts "\nConfigure %s with:" % vlan
         puts "#{opts.to_yaml}"
         dvs = find_dvs dvs_name, datacenter
 
-        tasks << dvs.ReconfigureDVPortgroup_Task(spec)
+        #tasks << dvs.ReconfigureDVPortgroup_Task(spec)
 
-        attempts = 5
-        try = (Time.now - start) / 5
-        wait_for_tasks tasks, try, attempts
-        puts 'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
+        #attempts = 5
+        #try = (Time.now - start) / 5
+        #wait_for_tasks tasks, try, attempts
+        #puts 'Spent %.2f seconds creating portgroup %s.' % [(Time.now - start), vlan]
       }
     end
 
